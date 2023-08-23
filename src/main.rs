@@ -1,7 +1,7 @@
-use std::net::TcpListener;
+use std::{net::TcpListener, time::Duration};
 
 use secrecy::ExposeSecret;
-use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use tracing::info;
 use zero_2_prod::{
     configuration::get_configuration,
@@ -15,14 +15,19 @@ async fn main() -> Result<(), std::io::Error> {
     init_subscriber(subscriber);
 
     let configuration = get_configuration().expect("failed to read configuration");
-    let connection = PgPool::connect(&configuration.database.connection_string().expose_secret())
-        .await
+    let connection = PgPoolOptions::new()
+        .acquire_timeout(Duration::from_secs(2))
+        .connect_lazy(&configuration.database.connection_string().expose_secret())
         .expect("failed to connect to postgres");
-    let address = format!("127.0.0.1:{port}", port = configuration.application_port);
+    let address = format!(
+        "{host}:{port}",
+        port = configuration.application.port,
+        host = configuration.application.host
+    );
     let listener = TcpListener::bind(address)?;
     info!(
         "listening on port {port}",
-        port = configuration.application_port
+        port = configuration.application.port
     );
     run(listener, connection)?.await
 }
