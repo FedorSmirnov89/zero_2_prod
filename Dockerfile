@@ -1,6 +1,6 @@
 # In this one, we are going to use cargo chef for compiling the dependencies in a separate step, so that the results of that step are cacheable
 
-FROM lukemathwalker/cargo-chef:latest-rust-1.63.0 as chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.71.1 as chef
 
 WORKDIR /app
 
