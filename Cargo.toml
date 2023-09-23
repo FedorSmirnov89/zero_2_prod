@@ -10,12 +10,14 @@ path = "src/lib.rs"
 
 [dependencies]
 actix-web = "4.3.1"
+anyhow = "1.0.75"
 chrono = "0.4.26"
 config = "0.13.3"
 rand = { version = "0.8.5", features = ["std_rng"] }
 secrecy = { version = "0.8.0", features = ["serde"] }
 serde = { version = "1.0.178", features = ["derive"] }
 serde-aux = "4.2.0"
+thiserror = "1.0.48"
 tokio = { version = "1.29.1", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1.37", features = ["log"] }
 tracing-actix-web = "0.7.6"
