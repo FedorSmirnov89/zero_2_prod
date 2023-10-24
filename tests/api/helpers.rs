@@ -97,6 +97,21 @@ impl TestApp {
         self.get_change_password().await.text().await.unwrap()
     }
 
+    pub async fn post_newsletter_issue<Body>(&self, body: &Body) -> reqwest::Response
+    where
+        Body: serde::Serialize,
+    {
+        self.api_client
+            .post(&format!(
+                "{address}/admin/newsletters",
+                address = self.address
+            ))
+            .form(body)
+            .send()
+            .await
+            .expect("failed to execute request")
+    }
+
     pub async fn post_change_password<Body>(&self, body: &Body) -> reqwest::Response
     where
         Body: serde::Serialize,
@@ -142,16 +157,6 @@ impl TestApp {
         self.api_client
             .post(&format!("{address}/login", address = &self.address))
             .form(body)
-            .send()
-            .await
-            .expect("failed to execute request")
-    }
-
-    pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
-        self.api_client
-            .post(&format!("{address}/newsletters", address = self.address))
-            .basic_auth(&self.test_user.username, Some(&self.test_user.password))
-            .json(&body)
             .send()
             .await
             .expect("failed to execute request")

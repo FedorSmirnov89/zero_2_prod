@@ -2,7 +2,6 @@ pub mod health_check;
 mod home;
 mod login;
 mod logout;
-pub mod newletters;
 pub mod subscriptions;
 pub mod subscriptions_confirm;
 

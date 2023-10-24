@@ -15,13 +15,16 @@ use tracing::info;
 use tracing_actix_web::TracingLogger;
 
 use crate::{
-    admin::{admin_dashboard, get::change_password_form, post::change_password},
+    admin::{
+        admin_dashboard, get::change_password_form, newsletter_form, post::change_password,
+        publish_newsletter,
+    },
     authentication::reject_anonymous_users,
     configuration::{DataBaseSettings, Settings},
     email_client::EmailClient,
     routes::{
-        health_check::health_check, home, log_out, login, login_form,
-        newletters::publish_newsletter, subscriptions::subscribe, subscriptions_confirm::confirm,
+        health_check::health_check, home, log_out, login, login_form, subscriptions::subscribe,
+        subscriptions_confirm::confirm,
     },
 };
 
@@ -120,14 +123,15 @@ pub async fn run(
             .route("/", web::get().to(home))
             .route("/login", web::get().to(login_form))
             .route("/login", web::post().to(login))
-            .route("/newsletters", web::post().to(publish_newsletter))
             .service(
                 web::scope("/admin")
                     .wrap(from_fn(reject_anonymous_users))
                     .route("/password", web::post().to(change_password))
                     .route("/password", web::get().to(change_password_form))
                     .route("/dashboard", web::get().to(admin_dashboard))
-                    .route("/logout", web::post().to(log_out)),
+                    .route("/logout", web::post().to(log_out))
+                    .route("/newsletters", web::get().to(newsletter_form))
+                    .route("/newsletters", web::post().to(publish_newsletter)),
             )
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
