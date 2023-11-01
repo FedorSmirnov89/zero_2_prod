@@ -5,6 +5,8 @@ use uuid::Uuid;
 use wiremock::MockServer;
 use zero_2_prod::{
     configuration::{get_configuration, DataBaseSettings},
+    email_client::EmailClient,
+    issue_delivery_worker::{try_execute_task, ExecutionOutcome},
     startup::{get_connection_pool, Application},
     telemetry::{get_subscriber, init_subscriber},
 };
@@ -34,6 +36,7 @@ pub struct TestApp {
     pub port: u16,
     pub test_user: TestUser,
     pub api_client: reqwest::Client,
+    pub email_client: EmailClient,
 }
 
 pub struct TestUser {
@@ -43,6 +46,15 @@ pub struct TestUser {
 }
 
 impl TestUser {
+    pub async fn login(&self, app: &TestApp) {
+        let login_body = serde_json::json!({
+            "username": &self.username,
+            "password": &self.password,
+        });
+        let response = app.post_login(&login_body).await;
+        assert_is_redirect_to(&response, "/admin/dashboard");
+    }
+
     pub fn generate() -> Self {
         Self {
             user_id: Uuid::new_v4(),
@@ -77,6 +89,18 @@ impl TestUser {
 }
 
 impl TestApp {
+    pub async fn dispatch_all_pending_emails(&self) {
+        loop {
+            if let ExecutionOutcome::EmptyQueue =
+                try_execute_task(&self.db_pool, &self.email_client)
+                    .await
+                    .unwrap()
+            {
+                break;
+            }
+        }
+    }
+
     pub async fn post_logout(&self) -> reqwest::Response {
         self.api_client
             .post(&format!("{address}/admin/logout", address = &self.address))
@@ -122,6 +146,21 @@ impl TestApp {
             .send()
             .await
             .expect("failed to execute request")
+    }
+
+    pub async fn get_publish_newsletter(&self) -> reqwest::Response {
+        self.api_client
+            .get(&format!(
+                "{address}/admin/newsletters",
+                address = &self.address,
+            ))
+            .send()
+            .await
+            .expect("failed to execute request")
+    }
+
+    pub async fn get_publish_newsletter_html(&self) -> String {
+        self.get_publish_newsletter().await.text().await.unwrap()
     }
 
     pub async fn get_admin_dashboard(&self) -> reqwest::Response {
@@ -235,6 +274,7 @@ pub async fn spawn_app() -> TestApp {
         port,
         test_user: TestUser::generate(),
         api_client: client,
+        email_client: configuration.email_client.client(),
     };
     test_app.test_user.store(&test_app.db_pool).await;
     test_app
